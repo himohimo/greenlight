@@ -34,7 +34,8 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 
 	if err != nil {
 		app.logger.Error(err.Error())
-		http.Error(w, "Can't process your request", http.StatusInternalServerError)
+
+		app.serverErrorResponse(w, r, err)
 	}
 
 }
