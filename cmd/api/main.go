@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const version = "1.0.0"
@@ -37,12 +37,12 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	conn, err := openDB(cfg)
+	dbpool, err := openDB(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
-	defer conn.Close(context.Background())
+	defer dbpool.Close()
 
 	app := &application{
 		config: cfg,
@@ -66,8 +66,8 @@ func main() {
 
 }
 
-func openDB(cfg config) (*pgx.Conn, error) {
-	conn, err := pgx.Connect(context.Background(), cfg.db.dsn)
+func openDB(cfg config) (*pgxpool.Pool, error) {
+	dbpool, err := pgxpool.New(context.Background(), cfg.db.dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -75,11 +75,11 @@ func openDB(cfg config) (*pgx.Conn, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = conn.Ping(ctx)
+	err = dbpool.Ping(ctx)
 	if err != nil {
-		conn.Close(context.Background())
+		dbpool.Close()
 		return nil, err
 	}
 
-	return conn, nil
+	return dbpool, nil
 }
