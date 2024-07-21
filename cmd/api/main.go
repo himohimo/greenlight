@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"greenlight.jpmn.com/internal/data"
 )
 
 const version = "1.0.0"
@@ -28,6 +29,7 @@ type config struct {
 type application struct {
 	config config
 	logger *slog.Logger
+	models data.Models
 }
 
 func main() {
@@ -43,7 +45,7 @@ func main() {
 
 	flag.Parse()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	dbpool, err := openDB(cfg)
 	if err != nil {
@@ -52,9 +54,12 @@ func main() {
 	}
 	defer dbpool.Close()
 
+	logger.Info("db connection pool established")
+
 	app := &application{
 		config: cfg,
 		logger: logger,
+		models: data.NewModels(dbpool),
 	}
 
 	srv := &http.Server{
