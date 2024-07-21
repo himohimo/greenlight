@@ -1,8 +1,10 @@
 package data
 
 import (
+	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"greenlight.jpmn.com/internal/validator"
 )
@@ -36,7 +38,20 @@ type MovieModel struct {
 }
 
 func (m MovieModel) Insert(movie *Movie) error {
-	return nil
+	query := `
+		INSERT INTO movies (title, year, runtime, genres)
+		VALUES (@title, @year, @runtime, @genres)
+		RETURNING id, created_at, version
+	`
+
+	args := pgx.NamedArgs{
+		"title":   movie.Title,
+		"year":    movie.Year,
+		"runtime": movie.Runtime,
+		"genres":  movie.Genres,
+	}
+
+	return m.DB.QueryRow(context.Background(), query, args).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
 func (m MovieModel) Get(id int64) (*Movie, error) {
