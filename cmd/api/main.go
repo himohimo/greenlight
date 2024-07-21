@@ -18,7 +18,10 @@ type config struct {
 	port int
 	env  string
 	db   struct {
-		dsn string
+		dsn          string
+		maxOpenConns int
+		maxIdleConns int
+		maxIdleTime  time.Duration
 	}
 }
 
@@ -33,6 +36,11 @@ func main() {
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 	flag.StringVar(&cfg.db.dsn, "db-dsn", "postgres://greenlight:pa55word@localhost/greenlight", "PostgreSQL DSN")
+
+	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
+	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
+	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "PostgreSQL max connection idle time")
+
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -67,7 +75,17 @@ func main() {
 }
 
 func openDB(cfg config) (*pgxpool.Pool, error) {
-	dbpool, err := pgxpool.New(context.Background(), cfg.db.dsn)
+
+	pgxConfig, err := pgxpool.ParseConfig(cfg.db.dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	pgxConfig.MaxConns = int32(cfg.db.maxOpenConns)
+	pgxConfig.MaxConnIdleTime = cfg.db.maxIdleTime
+	// pgx doesn't have maxIdleConns
+
+	dbpool, err := pgxpool.NewWithConfig(context.Background(), pgxConfig)
 	if err != nil {
 		return nil, err
 	}
