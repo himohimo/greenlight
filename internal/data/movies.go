@@ -95,7 +95,27 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 }
 
 func (m MovieModel) Update(movie *Movie) error {
-	return nil
+	query := `
+		UPDATE movies
+		SET 
+			title = @title, 
+			year = @year, 
+			runtime = @runtime,
+			genres = @genres,
+			version = version + 1
+		WHERE id = @id
+		RETURNING version
+	`
+
+	args := pgx.NamedArgs{
+		"title":   movie.Title,
+		"year":    movie.Year,
+		"runtime": movie.Runtime,
+		"genres":  movie.Genres,
+		"id":      movie.ID,
+	}
+
+	return m.DB.QueryRow(context.Background(), query, args).Scan(&movie.Version)
 }
 
 func (m MovieModel) Delete(id int64) error {
