@@ -119,5 +119,29 @@ func (m MovieModel) Update(movie *Movie) error {
 }
 
 func (m MovieModel) Delete(id int64) error {
+	if id < 1 {
+		return ErrRecordNotFound
+	}
+
+	query := `
+		DELETE FROM movies
+		WHERE id = @id
+	`
+
+	args := pgx.NamedArgs{
+		"id": id,
+	}
+
+	result, err := m.DB.Exec(context.Background(), query, args)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected := result.RowsAffected()
+
+	if rowsAffected == 0 {
+		return ErrRecordNotFound
+	}
+
 	return nil
 }
