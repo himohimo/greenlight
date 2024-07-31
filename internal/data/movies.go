@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"time"
 
@@ -103,7 +104,7 @@ func (m MovieModel) Update(movie *Movie) error {
 			runtime = @runtime,
 			genres = @genres,
 			version = version + 1
-		WHERE id = @id
+		WHERE id = @id and version = @version
 		RETURNING version
 	`
 
@@ -113,9 +114,20 @@ func (m MovieModel) Update(movie *Movie) error {
 		"runtime": movie.Runtime,
 		"genres":  movie.Genres,
 		"id":      movie.ID,
+		"version": movie.Version,
 	}
 
-	return m.DB.QueryRow(context.Background(), query, args).Scan(&movie.Version)
+	err := m.DB.QueryRow(context.Background(), query, args).Scan(&movie.Version)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (m MovieModel) Delete(id int64) error {
