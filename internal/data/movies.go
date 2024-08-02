@@ -53,7 +53,10 @@ func (m MovieModel) Insert(movie *Movie) error {
 		"genres":  movie.Genres,
 	}
 
-	return m.DB.QueryRow(context.Background(), query, args).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	return m.DB.QueryRow(ctx, query, args).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
 func (m MovieModel) Get(id int64) (*Movie, error) {
@@ -73,7 +76,10 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 
 	var movie Movie
 
-	err := m.DB.QueryRow(context.Background(), query, args).Scan(
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRow(ctx, query, args).Scan(
 		&movie.ID,
 		&movie.CreatedAt,
 		&movie.Title,
@@ -117,7 +123,10 @@ func (m MovieModel) Update(movie *Movie) error {
 		"version": movie.Version,
 	}
 
-	err := m.DB.QueryRow(context.Background(), query, args).Scan(&movie.Version)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRow(ctx, query, args).Scan(&movie.Version)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -144,7 +153,10 @@ func (m MovieModel) Delete(id int64) error {
 		"id": id,
 	}
 
-	result, err := m.DB.Exec(context.Background(), query, args)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	result, err := m.DB.Exec(ctx, query, args)
 	if err != nil {
 		return err
 	}
